@@ -8,10 +8,15 @@
 
 		vec4 shader() {
 			vec2 uv = position / resolution;
-			if (uv.y > uv.x) return vec4(0);
-			float dist = 10.0 * length(uv - 0.5);
+			uv -= 0.5;
+			float angle = atan(uv.y, uv.x);
+			float radius = length(uv);
+			float petal = 0.78;
+			// if (mod(angle, petal) / petal * 0.5 < radius) return vec4(0);
+			float dist = 10.0 * radius;
 			float alpha = 1.0 / pow(dist, 2.0) - 0.04;
 			return vec4(color, alpha);
+			return vec4(color * (1.0 - alpha), 1);
 		}
 	`);
 
