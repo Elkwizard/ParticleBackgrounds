@@ -1,0 +1,40 @@
+<script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Basic Particles">
+	const color = new Color("#" + new URL(location.href).searchParams.get("color"));
+	const background = Color.saturate(color.inverse, 0.15);
+	background.brightness = 0.1;
+
+	canvas.clearScreen = () => renderer.fill(background);
+
+	const particles = scene.main.addElement("particles", width / 2, height / 2);
+	particles.scripts.add(PARTICLE_SPAWNER, {
+		radius: 5,
+		delay: 0.1,
+		falls: false,
+		slows: false,
+		lifeSpan: 400,
+		radius: 50,
+		init(particle) {
+			particle.velocity = Vector2.fromAngle(Random.angle()).times(Random.range(3, 5));
+			particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
+			particle.data.size = Random.range(1, 5);
+			particle.data.offset = Random.range(0, 1000);
+		},
+		update(particle) {
+			const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
+			const angle = Interpolation.smooth(noise) * Math.PI * 2;
+			const vec = Vector2.fromAngle(angle).times(0.2);
+			particle.velocity.add(vec);
+		},
+		draw(renderer, particle) {
+			const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
+			renderer.save();
+			renderer.translate(particle.position);
+			renderer.scale(0.06 * scale);
+			const STEPS = 10;
+			for (let i = 0; i < STEPS; i++) {
+				renderer.draw(Color.alpha(particle.data.color, (1 - i / STEPS) ** 2)).circle(0, 0, particle.data.size * i ** 2);
+			}
+			renderer.restore();
+		}
+	});
+</script>
