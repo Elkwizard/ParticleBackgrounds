@@ -8,11 +8,14 @@
 
 		vec4 shader() {
 			vec2 uv = position / resolution;
+			if (uv.y > uv.x) return vec4(0);
 			float dist = 10.0 * length(uv - 0.5);
 			float alpha = 1.0 / pow(dist, 2.0) - 0.04;
 			return vec4(color, alpha);
 		}
-	`);	
+	`);
+
+	gradient.setArguments({ color });
 
 	canvas.clearScreen = () => renderer.fill(background);
 
@@ -29,8 +32,6 @@
 			particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
 			particle.data.size = Random.range(1, 5);
 			particle.data.offset = Random.range(0, 1000);
-			gradient.setArguments({ color: particle.data.color });
-			particle.data.image = Frame.fromImageType(gradient);
 		},
 		update(particle) {
 			const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
@@ -44,7 +45,7 @@
 			renderer.translate(particle.position);
 			renderer.scale(8 * scale);
 			const { size } = particle.data;
-			renderer.image(particle.data.image).rect(-size / 2, -size / 2, size, size);
+			renderer.image(gradient).rect(-size / 2, -size / 2, size, size);
 			renderer.restore();
 		}
 	});
