@@ -1,5 +1,5 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Basic Particles">
-	const color = new Color(new URL(location.href).searchParams.get("color"));
+	const color = new Color("#" + new URL(location.href).searchParams.get("color"));
 	const background = Color.saturate(color.inverse, 0.15);
 	background.brightness = 0.1;
 
