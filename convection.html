@@ -1,57 +1,60 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Convection Particles">
-	const color = new Color("#" + new URL(location.href).searchParams.get("color"));
-	const background = Color.saturate(color.inverse, 0.15);
-	background.brightness = 0.1;
+	canvas.scalingMode = ScalingMode.STRETCH;
+	intervals.delay(() => {
+		const color = new Color("#" + new URL(location.href).searchParams.get("color"));
+		const background = Color.saturate(color.inverse, 0.15);
+		background.brightness = 0.1;
 
-	const gradient = new GPUShader(50, 50, `
-		uniform vec3 color;
+		const gradient = new GPUShader(50, 50, `
+			uniform vec3 color;
 
-		vec4 shader() {
-			vec2 uv = position / resolution;
-			uv -= 0.5;
-			float angle = atan(uv.y, uv.x);
-			float radius = length(uv);
-			float petal = 0.78;
-			// if (mod(angle, petal) / petal * 0.5 < radius) return vec4(0);
-			float dist = 10.0 * radius;
-			float alpha = 1.0 / pow(dist, 2.0) - 0.04;
-			return vec4(color, alpha);
-			return vec4(color * (1.0 - alpha), 1);
-		}
-	`);
+			vec4 shader() {
+				vec2 uv = position / resolution;
+				uv -= 0.5;
+				float angle = atan(uv.y, uv.x);
+				float radius = length(uv);
+				float petal = 0.78;
+				// if (mod(angle, petal) / petal * 0.5 < radius) return vec4(0);
+				float dist = 10.0 * radius;
+				float alpha = 1.0 / pow(dist, 2.0) - 0.04;
+				return vec4(color, alpha);
+				return vec4(color * (1.0 - alpha), 1);
+			}
+		`);
 
-	gradient.setArguments({ color });
+		gradient.setArguments({ color });
 
-	canvas.clearScreen = () => renderer.fill(background);
+		canvas.clearScreen = () => renderer.fill(background);
 
-	const particles = scene.main.addElement("particles", width / 2, height / 2);
-	particles.scripts.add(PARTICLE_SPAWNER, {
-		radius: 5,
-		delay: 0.1,
-		falls: false,
-		slows: false,
-		lifeSpan: 400,
-		radius: 50,
-		init(particle) {
-			particle.velocity = Vector2.fromAngle(Random.angle()).times(Random.range(3, 5));
-			particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
-			particle.data.size = Random.range(1, 5);
-			particle.data.offset = Random.range(0, 1000);
-		},
-		update(particle) {
-			const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
-			const angle = Interpolation.smooth(noise) * Math.PI * 2;
-			const vec = Vector2.fromAngle(angle).times(0.2);
-			particle.velocity.add(vec);
-		},
-		draw(renderer, particle) {
-			const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
-			renderer.save();
-			renderer.translate(particle.position);
-			renderer.scale(8 * scale);
-			const { size } = particle.data;
-			renderer.image(gradient).rect(-size / 2, -size / 2, size, size);
-			renderer.restore();
-		}
-	});
+		const particles = scene.main.addElement("particles", width / 2, height / 2);
+		particles.scripts.add(PARTICLE_SPAWNER, {
+			radius: 5,
+			delay: 0.1,
+			falls: false,
+			slows: false,
+			lifeSpan: 400,
+			radius: 50,
+			init(particle) {
+				particle.velocity = Vector2.fromAngle(Random.angle()).times(Random.range(3, 5));
+				particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
+				particle.data.size = Random.range(1, 5);
+				particle.data.offset = Random.range(0, 1000);
+			},
+			update(particle) {
+				const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
+				const angle = Interpolation.smooth(noise) * Math.PI * 2;
+				const vec = Vector2.fromAngle(angle).times(0.2);
+				particle.velocity.add(vec);
+			},
+			draw(renderer, particle) {
+				const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
+				renderer.save();
+				renderer.translate(particle.position);
+				renderer.scale(8 * scale);
+				const { size } = particle.data;
+				renderer.image(gradient).rect(-size / 2, -size / 2, size, size);
+				renderer.restore();
+			}
+		});
+	}, 10);
 </script>

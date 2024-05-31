@@ -1,104 +1,107 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Stars">
-	const stars = new GPUShader(width, height, `
-		uniform float time;
+	canvas.scalingMode = ScalingMode.STRETCH;
+	intervals.delay(() => {
+		const stars = new GPUShader(width, height, `
+			uniform float time;
 
-		float random11(float seed) {
-			float a = mod(seed * 6.12849, 8.7890975);
-			float b = mod(a * 256745.4758903, 232.567890);
-			return mod(abs(a * b), 1.0);
-		}
-
-		vec2 random22(vec2 seed) {
-			return vec2(random11(seed.x + seed.y * 23.23857), random11(seed.x * 10.8237 + seed.y));
-		}
-
-		float random21(vec2 seed) {
-			return random11(seed.x + 3.238975 * seed.y + 5.237 * seed.x);
-		}
-
-		vec2 smoothT(vec2 t) {
-			return t * t * (-2.0 * t + 3.0);
-		}
-
-		float perlin(vec2 seed) {
-			vec2 samplePoint = floor(seed);
-			float a = random21(samplePoint);
-			float b = random21(samplePoint + vec2(1.0, 0.0));
-			float c = random21(samplePoint + vec2(0.0, 1.0));
-			float d = random21(samplePoint + vec2(1.0));
-			vec2 t = smoothT(mod(seed, 1.0));
-			return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
-		}
-		float octavePerlin(vec2 seed) {
-			seed += 10.0;
-			float sum = 0.0;
-			float scale = 0.0;
-			for (float o = 0.0; o < 7.0; o++) {
-				float i = o + 1.0;
-				sum += perlin(seed * i) / i;
-				scale += 1.0 / i;
+			float random11(float seed) {
+				float a = mod(seed * 6.12849, 8.7890975);
+				float b = mod(a * 256745.4758903, 232.567890);
+				return mod(abs(a * b), 1.0);
 			}
-			return sum / scale;
-		}
-	
-		vec2 rotate(vec2 point, float angle) {
-			float c = cos(angle);
-			float s = sin(angle);
-			return vec2(point.x * c - point.y * s, point.x * s + point.y * c);
-		}
 
-		vec2 rotate(vec2 point, float angle, vec2 origin) {
-			return rotate(point - origin, angle) + origin;
-		}
-
-		float starLayer(float speed) {
-			float CELL = 5.0;
-			vec2 pos = rotate(position, time * speed * 0.0001 + speed * 20.0, vec2(resolution.x * 0.5, resolution.y * 3.0));
-			vec2 gridPosition = floor(pos / CELL) * CELL;
-			float stars = pow(octavePerlin(pos * 0.01), 3.0) * 0.1;
-			float dist = length((pos - gridPosition) / CELL - 0.5);
-			if (dist < 0.5) {
-				float noise = random21(gridPosition);
-				stars += speed * pow(noise, 1000.0) * 40.0 * pow(0.5 - dist, 4.0); 
+			vec2 random22(vec2 seed) {
+				return vec2(random11(seed.x + seed.y * 23.23857), random11(seed.x * 10.8237 + seed.y));
 			}
-			return stars;
-		}
 
-		vec4 shader() {
-			float stars = 0.0;
+			float random21(vec2 seed) {
+				return random11(seed.x + 3.238975 * seed.y + 5.237 * seed.x);
+			}
 
-			vec2 center = vec2(200.0, 100.0);
-			vec2 offCenter = vec2(210.0, 95.0);
-			float radius = 30.0;
-			if (distance(position, center) < radius) {
-				float offDistance = distance(position, offCenter);
-				float buffer = 5.0;
-				float shade = smoothstep(
-					radius - buffer,
-					radius + buffer,
-					offDistance
-				) * 0.9 + 0.1;
+			vec2 smoothT(vec2 t) {
+				return t * t * (-2.0 * t + 3.0);
+			}
 
-				float r = distance(position, center);
-				float slope = -r / sqrt(radius * radius - r * r);
-				vec2 diff = position - center;
-				diff *= max(1.0, -slope);
+			float perlin(vec2 seed) {
+				vec2 samplePoint = floor(seed);
+				float a = random21(samplePoint);
+				float b = random21(samplePoint + vec2(1.0, 0.0));
+				float c = random21(samplePoint + vec2(0.0, 1.0));
+				float d = random21(samplePoint + vec2(1.0));
+				vec2 t = smoothT(mod(seed, 1.0));
+				return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
+			}
+			float octavePerlin(vec2 seed) {
+				seed += 10.0;
+				float sum = 0.0;
+				float scale = 0.0;
+				for (float o = 0.0; o < 7.0; o++) {
+					float i = o + 1.0;
+					sum += perlin(seed * i) / i;
+					scale += 1.0 / i;
+				}
+				return sum / scale;
+			}
+		
+			vec2 rotate(vec2 point, float angle) {
+				float c = cos(angle);
+				float s = sin(angle);
+				return vec2(point.x * c - point.y * s, point.x * s + point.y * c);
+			}
+
+			vec2 rotate(vec2 point, float angle, vec2 origin) {
+				return rotate(point - origin, angle) + origin;
+			}
+
+			float starLayer(float speed) {
+				float CELL = 5.0;
+				vec2 pos = rotate(position, time * speed * 0.0001 + speed * 20.0, vec2(resolution.x * 0.5, resolution.y * 3.0));
+				vec2 gridPosition = floor(pos / CELL) * CELL;
+				float stars = pow(octavePerlin(pos * 0.01), 3.0) * 0.1;
+				float dist = length((pos - gridPosition) / CELL - 0.5);
+				if (dist < 0.5) {
+					float noise = random21(gridPosition);
+					stars += speed * pow(noise, 1000.0) * 40.0 * pow(0.5 - dist, 4.0); 
+				}
+				return stars;
+			}
+
+			vec4 shader() {
+				float stars = 0.0;
+
+				vec2 center = vec2(200.0, 100.0);
+				vec2 offCenter = vec2(210.0, 95.0);
+				float radius = 30.0;
+				if (distance(position, center) < radius) {
+					float offDistance = distance(position, offCenter);
+					float buffer = 5.0;
+					float shade = smoothstep(
+						radius - buffer,
+						radius + buffer,
+						offDistance
+					) * 0.9 + 0.1;
+
+					float r = distance(position, center);
+					float slope = -r / sqrt(radius * radius - r * r);
+					vec2 diff = position - center;
+					diff *= max(1.0, -slope);
+					
+
+					float noise = octavePerlin(diff * 0.1);
+					stars += shade * noise;
+				}
+
+				for (int i = 1; i < 4; i++) {
+					stars += starLayer(float(i));
+				}
 				
-
-				float noise = octavePerlin(diff * 0.1);
-				stars += shade * noise;
+				return vec4(vec3(stars), 1.0);
 			}
+		`);
 
-			for (int i = 1; i < 4; i++) {
-				stars += starLayer(float(i));
-			}
-			
-			return vec4(vec3(stars), 1.0);
-		}
-	`);
-
-	intervals.continuous(time => {
-		stars.setArguments({ time });
-		renderer.image(stars).default(0, 0);
-	}, IntervalFunction.AFTER_UPDATE);
+		intervals.continuous(time => {
+			stars.setArguments({ time });
+			renderer.image(stars).default(0, 0);
+		}, IntervalFunction.AFTER_UPDATE);
+	}, 10);
 </script>

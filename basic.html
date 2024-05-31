@@ -1,53 +1,56 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Basic Particles">
-	const color = new Color("#" + new URL(location.href).searchParams.get("color"));
-	const background = Color.saturate(color.inverse, 0.15);
-	background.brightness = 0.1;
+	canvas.scalingMode = ScalingMode.STRETCH;
+	intervals.delay(() => {
+		const color = new Color("#" + new URL(location.href).searchParams.get("color"));
+		const background = Color.saturate(color.inverse, 0.15);
+		background.brightness = 0.1;
 
-	canvas.clearScreen = () => renderer.fill(background);
-	
-	const genVelocity = () => new Vector2(
-		Random.range(-1, 1) * 2,
-		Random.range(1, 2)
-	);
-	const particles = scene.main.addElement("particles", 0, 0);
-	particles.scripts.add(PARTICLE_SPAWNER, {
-		radius: 5,
-		delay: 1,
-		falls: false,
-		slows: false,
-		lifeSpan: 1e9,
-		active: false,
-		radius: 50,
-		init(particle) {
-			particle.position = Random.inShape(scene.camera.screen);
-			particle.velocity = genVelocity();
-			particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
-			particle.data.size = Random.range(1, 5);
-			particle.data.offset = Random.range(0, 1000);
-		},
-		update(particle) {
-			const buffer = 20;
-			const mod = (a, b) => a.mod(b).plus(b).mod(b);
-			const { min, max } = scene.camera.screen;
-			particle.velocity.x += Random.range(-1, 1) * 0.01;
-			min.sub(buffer);
-			max.add(buffer.times(2));
-			const newPos = mod(particle.position.minus(min), max.minus(min)).plus(min);
-			if (!particle.position.equals(newPos))
+		canvas.clearScreen = () => renderer.fill(background);
+		
+		const genVelocity = () => new Vector2(
+			Random.range(-1, 1) * 2,
+			Random.range(1, 2)
+		);
+		const particles = scene.main.addElement("particles", 0, 0);
+		particles.scripts.add(PARTICLE_SPAWNER, {
+			radius: 5,
+			delay: 1,
+			falls: false,
+			slows: false,
+			lifeSpan: 1e9,
+			active: false,
+			radius: 50,
+			init(particle) {
+				particle.position = Random.inShape(scene.camera.screen);
 				particle.velocity = genVelocity();
-			particle.position = newPos;
-		},
-		draw(renderer, particle) {
-			const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
-			renderer.save();
-			renderer.translate(particle.position);
-			renderer.scale(0.06 * scale);
-			const STEPS = 10;
-			for (let i = 0; i < STEPS; i++) {
-				renderer.draw(Color.alpha(particle.data.color, (1 - i / STEPS) ** 2)).circle(0, 0, particle.data.size * i ** 2);
+				particle.data.color = Color.colorScale(color, Random.range(0.8, 1.2));
+				particle.data.size = Random.range(1, 5);
+				particle.data.offset = Random.range(0, 1000);
+			},
+			update(particle) {
+				const buffer = 20;
+				const mod = (a, b) => a.mod(b).plus(b).mod(b);
+				const { min, max } = scene.camera.screen;
+				particle.velocity.x += Random.range(-1, 1) * 0.01;
+				min.sub(buffer);
+				max.add(buffer.times(2));
+				const newPos = mod(particle.position.minus(min), max.minus(min)).plus(min);
+				if (!particle.position.equals(newPos))
+					particle.velocity = genVelocity();
+				particle.position = newPos;
+			},
+			draw(renderer, particle) {
+				const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
+				renderer.save();
+				renderer.translate(particle.position);
+				renderer.scale(0.06 * scale);
+				const STEPS = 10;
+				for (let i = 0; i < STEPS; i++) {
+					renderer.draw(Color.alpha(particle.data.color, (1 - i / STEPS) ** 2)).circle(0, 0, particle.data.size * i ** 2);
+				}
+				renderer.restore();
 			}
-			renderer.restore();
-		}
-	});
-	particles.scripts.PARTICLE_SPAWNER.explode(0.0002 * width * height);
+		});
+		particles.scripts.PARTICLE_SPAWNER.explode(0.0002 * width * height);
+	}, 10);
 </script>
