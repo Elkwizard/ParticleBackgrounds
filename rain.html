@@ -1,7 +1,6 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Rain">
 	canvas.scalingMode = ScalingMode.STRETCH;
 	intervals.delay(() => {
-		canvas.clearScreen = () => renderer.fill(Color.SKY_BLUE);
 
 		const project = ({ x, y, z }) => {
 			const w2 = width / 2;
@@ -11,7 +10,6 @@
 
 		const WATER = 1;
 		const FOG_FACTOR = -0.05;
-		const SUN_DIRECTION = new Vector3(-0.2, -0.3, 0.5).normalized;
 		const ripples = [];
 
 		const fog = position => Math.exp(FOG_FACTOR * position.z);
@@ -117,6 +115,8 @@
 			uniform vec3 sunDirection;
 			uniform vec2 sunPosition;
 			uniform float sunRadius;
+			uniform vec3 sunColor;
+			uniform vec3 skyColor;
 
 			float random11(float seed) {
 				float a = mod(seed * 6.12849, 8.7890975);
@@ -165,10 +165,11 @@
 				float z = y / proj.y;
 				float x = proj.x * z;
 				
+				
 				if (z <= 0.0) {
 					float dist = max(0.0, distance(sunPosition, position) - sunRadius);
 					float brightness = 1.0 / pow(0.03 * dist, 2.0) - 0.01;
-					return vec4(0.9, 0.9, 1.0, brightness);
+					return vec4(sunColor, brightness);
 				}
 
 				vec3 point = vec3(x, y, z);
@@ -179,16 +180,19 @@
 					cos(time * 0.03),
 					sin(time * 0.01)
 				));
-				height += waves * 0.1;
+				height += waves * 0.2;
 
 				vec2 sunDir = normalize(sunDirection.xz);
 
 				float dist = length(point.xz);
 				vec2 sunSample = point.xz + waves * vec2(-sunDir.y, sunDir.x);
 				float sunPath = max(0.0, dot(sunDir, sunSample) / dist);
+				float sunStrength = 2.0 * max(0.0, -sunDirection.y);
 
-				height += 0.3 * pow(sunPath, 20.0) * log(dist);
-				height += 0.05 * exp(min(dist, 50.0) * 0.05);
+				float sunLight = 0.5 * pow(sunPath, 20.0) * log(dist);
+				sunLight += 0.05 * exp(min(dist, 50.0) * 0.05);
+
+				vec3 color = vec3(0.2, 0.4, 0.8);
 
 				for (int i = 0; i < rippleCount; i++) {
 					Ripple ripple = ripples[i];
@@ -199,15 +203,32 @@
 					if (r < radius) {
 						float waveR = pow(3.0 * r / radius + age, 2.0);
 						float wave = sin(waveR) * 0.5 + 0.5;
-						height += 0.5 * wave * (1.0 - r / radius) * (1.0 - age);
+						float waveHeight = 0.5 * wave * (1.0 - r / radius) * (1.0 - age);
+						height += waveHeight;
+						color += waveHeight;
 					}
 				}
 
-				vec3 color = vec3(0.2, 0.4, 0.8) + height;
+				vec2 gradX = normalize(vec2(dFdx(point.x), dFdy(point.x)));
+				vec2 gradZ = normalize(vec2(dFdx(point.z), dFdy(point.z)));
+				vec2 gradH = vec2(dFdx(height), dFdy(height));
+				vec2 normalXZ = vec2(dot(gradH, gradX), dot(gradH, gradZ));
+				normalXZ = normalXZ / dist;
+				vec3 normal = normalize(vec3(normalXZ.x, -0.03, normalXZ.y));
+				
+				float diffuse = max(dot(normal, sunDirection), 0.0);
+				vec3 reflectDir = reflect(sunDirection, normal);
+				vec3 viewDir = normalize(point);
+				float specular = pow(max(0.0, dot(reflectDir, viewDir)), 60.0);
+				vec3 lighting = sunColor * (diffuse + specular);
+
+				// return vec4(vec3(specular + diffuse), 1.0);
+
+				// return vec4(normal * 0.5 + 0.5, 1.0);
 
 				float fog = exp(fogFactor * point.z);
 
-				return vec4(color, fog);
+				return vec4(color * lighting, fog);
 			}
 		`);
 
@@ -215,9 +236,12 @@
 			maxRippleAge: MAX_RIPPLE_AGE,
 			waterLevel: WATER,
 			fogFactor: FOG_FACTOR,
-			sunDirection: SUN_DIRECTION,
-			sunRadius: 0
+			sunRadius: 0,
+			sunColor: new Vector3(0.9, 0.9, 1.0)
 		});
+
+		const DAY = Color.SKY_BLUE;
+		const NIGHT = Color.BLACK;
 
 		intervals.continuous(time => {
 			for (let i = 0; i < ripples.length; i++) {
@@ -229,10 +253,26 @@
 			while (ripples.length > MAX_RIPPLES)
 				ripples.pop();
 
+			const hours = time * 0.005;
+			const dayAngle = (hours % 12) / 6 * Math.PI - Math.PI;
+			const sunVector = Vector2.fromAngle(dayAngle).times(new Vector2(0.9, 0.4));
+			const sunDirection = new Vector3(sunVector.x, sunVector.y, 0.5).normalized;
+
+			const sigmoid = x => 1 / (1 + Math.exp(-x));
+
+			const skyColor = Color.lerp(
+				DAY,
+				NIGHT,
+				sigmoid(4 * (sunDirection.y - 0.2))
+			);
+
+			renderer.fill(skyColor);
+
 			water.resize(width, height);
 			water.setArguments({
 				time, ripples, rippleCount: ripples.length,
-				sunPosition: project(SUN_DIRECTION.times(30)),
+				sunDirection, sunPosition: project(sunDirection.times(30)),
+				skyColor
 			});
 			renderer.image(water).default(0, 0);
 		}, IntervalFunction.UPDATE);
