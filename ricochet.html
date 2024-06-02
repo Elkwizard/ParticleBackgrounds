@@ -139,7 +139,7 @@
 				bright += dFdx(bright) * 0.5;
 				bright += dFdy(bright) * 0.5;
 
-				return color * vec4(vec3(bright), bright * 3.0);
+				return color * vec4(vec3(bright), bright);
 			}
 		`);
 
