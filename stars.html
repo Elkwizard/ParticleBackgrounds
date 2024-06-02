@@ -103,5 +103,9 @@
 			stars.setArguments({ time });
 			renderer.image(stars).default(0, 0);
 		}, IntervalFunction.AFTER_UPDATE);
+		
+		window.addEventListener("keydown", ({ key }) => {
+			if (key === " ") intervals.paused = !intervals.paused;
+		});
 	}, 10);
 </script>

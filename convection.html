@@ -56,5 +56,9 @@
 				renderer.restore();
 			}
 		});
+		
+		window.addEventListener("keydown", ({ key }) => {
+			if (key === " ") intervals.paused = !intervals.paused;
+		});
 	}, 10);
 </script>

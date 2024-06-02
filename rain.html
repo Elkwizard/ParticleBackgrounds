@@ -275,5 +275,9 @@
 			});
 			renderer.image(water).default(0, 0);
 		}, IntervalFunction.UPDATE);
+
+		window.addEventListener("keydown", ({ key }) => {
+			if (key === " ") intervals.paused = !intervals.paused;
+		});
 	}, 10);
 </script>

@@ -52,5 +52,9 @@
 			}
 		});
 		particles.scripts.PARTICLE_SPAWNER.explode(0.0002 * width * height);
+
+		window.addEventListener("keydown", ({ key }) => {
+			if (key === " ") intervals.paused = !intervals.paused;
+		});
 	}, 10);
 </script>
