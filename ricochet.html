@@ -64,9 +64,13 @@
 		const MIRROR_LENGTH = 200;
 
 		for (let i = 0; i < 20; i++) {
-			const start = Random.inShape(scene.camera.screen);
-			const end = start.plus(Vector2.fromAngle(Random.angle()).times(MIRROR_LENGTH));
-			OBSTACLES.push(new Line(start, end));
+			let line;
+			do {
+				const start = Random.inShape(scene.camera.screen);
+				const end = start.plus(Vector2.fromAngle(Random.angle()).times(MIRROR_LENGTH));
+				line = new Line(start, end);
+			} while (OBSTACLES.some(obstacle => obstacle.intersect(line)));
+			OBSTACLES.push(line);
 		}
 
 		const postProcess = new GPUShader(width, height, `
@@ -123,7 +127,7 @@
 				float count = 0.0;
 
 				for (int i = 0; i < 30; i++) {
-					vec2 polar = random22(position + vec2(i) * 1000.0 + time * 1000.0);
+					vec2 polar = random22(position + vec2(i) * 100.0 + time * 100.0);
 					polar *= vec2(6.28, 50.0 * polar.y);
 					vec2 cart = vec2(cos(polar.x), sin(polar.x)) * polar.y;
 					total += pixel(position + cart);
