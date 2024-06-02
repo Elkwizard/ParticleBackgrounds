@@ -1,0 +1,154 @@
+<script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Ricochet">
+	canvas.scalingMode = ScalingMode.STRETCH;
+	intervals.delay(() => {
+		const color = new Color("#" + new URL(location.href).searchParams.get("color"));
+		const background = Color.saturate(color.inverse, 0.15);
+		background.brightness = 0.1;
+
+		canvas.clearScreen = () => renderer.clear();
+		
+		const genVelocity = () => Vector2.fromAngle(Random.angle()).times(Random.range(5, 10));
+		const genOmega = () => Random.range(-1, 1) * 0.1;
+		
+		const particles = scene.main.addElement("particles", 0, 0);
+		particles.scripts.add(PARTICLE_SPAWNER, {
+			radius: 5,
+			delay: 1,
+			falls: false,
+			slows: false,
+			lifeSpan: 1e9,
+			active: false,
+			radius: 50,
+			init(particle) {
+				particle.position = Random.inShape(scene.camera.screen);
+				particle.velocity = genVelocity();
+				particle.data.size = Random.range(1, 2);
+				particle.data.offset = Random.range(0, 1000);
+				particle.data.positions = [];
+				particle.data.omega = genOmega();
+			},
+			update(particle) {
+				const buffer = 20;
+				const mod = (a, b) => a.mod(b).plus(b).mod(b);
+				const { min, max } = scene.camera.screen;
+				
+				particle.velocity.rotate(particle.data.omega);
+				particle.data.omega *= 0.995;
+
+				const line = new Line(particle.position, particle.position.plus(particle.velocity));
+				for (const obstacle of OBSTACLES) {
+					if (obstacle.intersect(line)) {
+						const normal = obstacle.vector.normal.normalize();
+						const vel = particle.velocity;
+						vel.sub(vel.projectOnto(normal).times(2));
+						particle.data.omega = genOmega();
+					}
+				}
+
+				particle.data.positions.push(particle.position.get());
+				if (particle.data.positions.length > 20) particle.data.positions.shift();
+			},
+			draw(renderer, particle) {
+				renderer.stroke(Color.WHITE, particle.data.size).connector(particle.data.positions);
+			}
+		});
+		particles.scripts.PARTICLE_SPAWNER.explode(0.00003 * width * height);
+
+		const OBSTACLES = [
+			new Line(0, 0, width, 0),
+			new Line(0, height, width, height),
+			new Line(0, 0, 0, height),
+			new Line(width, 0, width, height)
+		];
+
+		const MIRROR_LENGTH = 200;
+
+		for (let i = 0; i < 20; i++) {
+			const start = Random.inShape(scene.camera.screen);
+			const end = start.plus(Vector2.fromAngle(Random.angle()).times(MIRROR_LENGTH));
+			OBSTACLES.push(new Line(start, end));
+		}
+
+		const postProcess = new GPUShader(width, height, `
+			uniform sampler2D canvas;
+			uniform vec4 color;
+			uniform float time;
+
+			float pixel(vec2 pos) {
+				return texture(canvas, pos / resolution).a;
+			}
+
+			float random11(float seed) {
+				float a = mod(seed * 6.12849, 8.7890975);
+				float b = mod(a * 256745.4758903, 232.567890);
+				return mod(abs(a * b), 1.0);
+			}
+
+			vec2 random22(vec2 seed) {
+				return vec2(random11(seed.x + seed.y * 23.23857), random11(seed.x * 10.8237 + seed.y));
+			}
+
+			float random21(vec2 seed) {
+				return random11(seed.x + 3.238975 * seed.y + 5.237 * seed.x);
+			}
+
+			vec2 smoothT(vec2 t) {
+				return t * t * (-2.0 * t + 3.0);
+			}
+
+			float perlin(vec2 seed) {
+				vec2 samplePoint = floor(seed);
+				float a = random21(samplePoint);
+				float b = random21(samplePoint + vec2(1.0, 0.0));
+				float c = random21(samplePoint + vec2(0.0, 1.0));
+				float d = random21(samplePoint + vec2(1.0));
+				vec2 t = smoothT(mod(seed, 1.0));
+				return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
+			}
+
+			float octavePerlin(vec2 seed) {
+				seed += 10.0;
+				float sum = 0.0;
+				float scale = 0.0;
+				for (float o = 0.0; o < 10.0; o++) {
+					float i = o + 1.0;
+					sum += perlin(seed * i) / i;
+					scale += 1.0 / i;
+				}
+				return sum / scale;
+			}
+
+			vec4 shader() {
+				float total = 0.0;
+				float count = 0.0;
+
+				for (int i = 0; i < 30; i++) {
+					vec2 polar = random22(position + vec2(i) * 1000.0 + time * 1000.0);
+					polar *= vec2(6.28, 50.0 * polar.y);
+					vec2 cart = vec2(cos(polar.x), sin(polar.x)) * polar.y;
+					total += pixel(position + cart);
+					count++;
+				}
+
+				float bright = 8.0 * total / count;
+
+				bright += dFdx(bright) * 0.5;
+				bright += dFdy(bright) * 0.5;
+
+				return color * vec4(vec3(bright), bright * 3.0);
+			}
+		`);
+
+		intervals.continuous(time => {
+			postProcess.setArguments({ canvas, color, time });
+			renderer.fill(background);
+			for (const line of OBSTACLES) {
+				const normal = line.vector.normal;
+				normal.mag = 0.5;
+				renderer.stroke(Color.CYAN).line(line.move(normal.inverse));
+				renderer.stroke(Color.WHITE).line(line.move(normal));
+			}
+			renderer.image(postProcess).default(0, 0);
+		}, IntervalFunction.AFTER_UPDATE);
+	}, 10);
+</script>
