@@ -189,8 +189,7 @@
 				float sunPath = max(0.0, dot(sunDir, sunSample) / dist);
 				float sunStrength = 2.0 * max(0.0, -sunDirection.y);
 
-				float sunLight = 0.5 * pow(sunPath, 20.0) * log(dist);
-				sunLight += 0.05 * exp(min(dist, 50.0) * 0.05);
+				float sunLight = sunStrength * 0.5 * pow(sunPath, 20.0) * log(dist);
 
 				vec3 color = vec3(0.2, 0.4, 0.8);
 
@@ -220,7 +219,7 @@
 				vec3 reflectDir = reflect(sunDirection, normal);
 				vec3 viewDir = normalize(point);
 				float specular = pow(max(0.0, dot(reflectDir, viewDir)), 60.0);
-				vec3 lighting = sunColor * (diffuse + specular);
+				vec3 lighting = sunColor * (diffuse + specular + sunLight) + skyColor * 0.2;
 
 				// return vec4(vec3(specular + diffuse), 1.0);
 
