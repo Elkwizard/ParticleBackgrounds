@@ -114,8 +114,7 @@
 							active: false
 						});
 					
-					opacity.target = imageRect.containsPoint(mouse.screen) ? 1 : 0;
-					
+					opacity.target = 1;
 					renderer.alpha = opacity.value;
 					renderer.draw(background).text(font, message, offset);
 					renderer.alpha = 1;
