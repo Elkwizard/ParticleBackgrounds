@@ -35,12 +35,13 @@
 		const targets = [];
 		const scale = 6;
 		const margin = 50;
-		const offset = new Vector2(
-			width - image.width * scale - margin,
-			height / 2 - image.height * scale / 2
-		);
-		const imageRect = new Rect(offset.x, offset.y, image.width * scale, image.height * scale);
+		let offset, imageRect;
 		if (image) {
+			offset = new Vector2(
+				width - image.width * scale - margin,
+				height / 2 - image.height * scale / 2
+			);
+			imageRect = new Rect(offset.x, offset.y, image.width * scale, image.height * scale);
 			const tex = Texture.fromImageType(image);
 			for (let i = 0; i < tex.width; i++)
 			for (let j = 0; j < tex.height; j++)
