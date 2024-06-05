@@ -1,7 +1,11 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Convection Particles">
 	canvas.scalingMode = ScalingMode.STRETCH;
-	intervals.delay(() => {
-		const color = new Color("#" + new URL(location.href).searchParams.get("color"));
+	const params = new URL(location.href).searchParams;
+	Promise.all([
+		new HengineImageResource(params.get("image")).load(),
+		intervals.delay(() => null, 10)
+	]).then(([image]) => {
+		const color = new Color("#" + params.get("color"));
 		const background = Color.saturate(color.inverse, 0.15);
 		background.brightness = 0.1;
 
@@ -26,6 +30,25 @@
 
 		canvas.clearScreen = () => renderer.fill(background);
 
+		const message = params.get("message");
+		const targets = [];
+		const scale = 6;
+		const margin = 50;
+		const offset = new Vector2(
+			width - image.width * scale - margin,
+			height / 2 - image.height * scale / 2
+		);
+		const imageRect = new Rect(offset.x, offset.y, image.width * scale, image.height * scale);
+		if (image) {
+			const tex = Texture.fromImageType(image);
+			for (let i = 0; i < tex.width; i++)
+			for (let j = 0; j < tex.height; j++)
+				if (tex.getPixel(i, j).alpha)
+					targets.push(new Vector2(i, j).times(scale).plus(offset));
+		}
+		const delay = params.get("delay") * 60;
+		const font = new Font(scale * 3, "Arial");
+
 		const particles = scene.main.addElement("particles", width / 2, height / 2);
 		particles.scripts.add(PARTICLE_SPAWNER, {
 			radius: 5,
@@ -41,17 +64,31 @@
 				particle.data.offset = Random.range(0, 1000);
 			},
 			update(particle) {
-				const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
-				const angle = Interpolation.smooth(noise) * Math.PI * 2;
-				const vec = Vector2.fromAngle(angle).times(0.2);
-				particle.velocity.add(vec);
+				if (particle.data.target) {
+					const diff = particle.data.target.minus(particle.position);
+					particle.velocity.set(diff.times(0.1));
+				} else {
+					const noise = Random.perlin3D(...particle.position.values, intervals.frameCount, 0.01);
+					const angle = Interpolation.smooth(noise) * Math.PI * 2;
+					const vec = Vector2.fromAngle(angle).times(0.2);
+					particle.velocity.add(vec);
+					
+					if (delay && intervals.frameCount > delay && Random.bool(0.02)) {
+						const index = Random.int(0, targets.length - 1);
+						particle.data.target = targets.splice(index, 1)[0];
+						if (particle.data.target) {
+							particle.data.size = scale * 0.67;
+							particle.data.target.add(Vector2.fromAngle(Random.angle()).times(scale * 0.1));
+						}
+					}
+				}
 			},
 			draw(renderer, particle) {
 				const scale = 0.5 + 0.8 * Random.perlin(intervals.frameCount + particle.data.offset, 0.01);
 				renderer.save();
 				renderer.translate(particle.position);
 				renderer.scale(8 * scale);
-				const { size } = particle.data;
+				let { size } = particle.data;
 				renderer.image(gradient).rect(-size / 2, -size / 2, size, size);
 				renderer.restore();
 			}
@@ -60,5 +97,29 @@
 		window.addEventListener("keydown", ({ key }) => {
 			if (key === " ") intervals.paused = !intervals.paused;
 		});
+
+		const opacity = new Animatable(0, 20);
+
+		intervals.continuous(time => {
+			if (delay && intervals.frameCount > delay) {
+				particles.scripts.PARTICLE_SPAWNER.setProperties({
+					lifeSpan: 1000000
+				});
+				
+				if (!targets.length) {
+					if (particles.scripts.PARTICLE_SPAWNER.active)
+						particles.scripts.PARTICLE_SPAWNER.setProperties({
+							active: false
+						});
+					
+					opacity.target = imageRect.containsPoint(mouse.screen) ? 1 : 0;
+					
+					renderer.alpha = opacity.value;
+					renderer.draw(background).text(font, message, offset);
+					renderer.alpha = 1;
+				}
+
+			}
+		}, IntervalFunction.AFTER_UPDATE);
 	}, 10);
 </script>
