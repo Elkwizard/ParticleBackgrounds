@@ -1,11 +1,12 @@
 <script src="https://elkwizard.github.io/Hengine/Hengine.js" title="Convection Particles">
 	canvas.scalingMode = ScalingMode.STRETCH;
-	const params = new URL(location.href).searchParams;
+	const params = JSON.parse(new URL(location.href).searchParams.get("params"));
+
 	Promise.all([
-		new HengineImageResource(params.get("image")).load(),
+		new HengineImageResource(params.image).load(),
 		intervals.delay(() => null, 10)
 	]).then(([image]) => {
-		const color = new Color("#" + params.get("color"));
+		const color = new Color("#" + params.color);
 		const background = Color.saturate(color.inverse, 0.15);
 		background.brightness = 0.1;
 
@@ -30,7 +31,7 @@
 
 		canvas.clearScreen = () => renderer.fill(background);
 
-		const message = params.get("message");
+		const message = params.message;
 		const targets = [];
 		const scale = 6;
 		const margin = 50;
@@ -46,7 +47,7 @@
 				if (tex.getPixel(i, j).alpha)
 					targets.push(new Vector2(i, j).times(scale).plus(offset));
 		}
-		const delay = params.get("delay") * 60;
+		const delay = params.delay * 60;
 		const font = new Font(scale * 3, "Arial");
 
 		const particles = scene.main.addElement("particles", width / 2, height / 2);
