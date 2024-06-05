@@ -105,7 +105,7 @@
 		intervals.continuous(time => {
 			if (delay && intervals.frameCount > delay) {
 				particles.scripts.PARTICLE_SPAWNER.setProperties({
-					lifeSpan: 1000000
+					lifeSpan: 1e30
 				});
 				
 				if (!targets.length) {
